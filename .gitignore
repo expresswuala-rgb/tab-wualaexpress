@@ -1,0 +1,17 @@
+.deploy-tools/
+node_modules/
+*.pyc
+__pycache__/
+salidas/
+dist/
+android-app/android/
+android-app/node_modules/
+tabuladores/settings.json
+test.txt
+backups/
+.deploy/
+prototipo_usuarios.html
+WualaExpress.html
+tabulador.csv
+tabulador_tipuro.csv
+test.txt

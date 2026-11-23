@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tabuladores · WualaExpress</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="/static/logo-mark.png" alt="WualaExpress" class="brand-logo" />
+      <div>
+        <h1>Tabuladores por ruta</h1>
+        <p>Una imagen por salida, con el precio a cada destino</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span class="badge" id="routeCount">— rutas</span>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="generate" type="button">Generar imágenes</button>
+    <button class="tab" data-tab="editor" type="button">Editor de tabulador</button>
+  </nav>
+
+  <main class="dashboard" id="generateView">
+    <aside class="sidebar">
+      <section class="card card-routes">
+        <div class="card-head">
+          <h2>Rutas (salidas)</h2>
+          <div class="group-actions">
+            <button class="link" id="selectAll" type="button">Todas</button>
+            <button class="link" id="selectNone" type="button">Ninguna</button>
+          </div>
+        </div>
+        <input type="search" id="routeSearch" class="search" placeholder="Buscar ruta…" autocomplete="off" />
+        <div class="sort-row">
+          <label for="routeSort">Orden:</label>
+          <select id="routeSort">
+            <option value="name">Nombre</option>
+            <option value="tariff">Tabulador</option>
+            <option value="dest">Más destinos</option>
+          </select>
+        </div>
+        <div class="route-list" id="routeList">
+          <p class="muted">Cargando rutas…</p>
+        </div>
+        <p class="hint" id="selectionHint">0 seleccionadas</p>
+      </section>
+
+      <section class="card card-style">
+        <h2>Estilo</h2>
+        <div class="styles" id="stylePicker">
+          <button type="button" class="style-card active" data-style="oscuro">
+            <span class="swatch swatch-dark"></span>
+            <span>Referencia<small>azul marino</small></span>
+          </button>
+          <button type="button" class="style-card" data-style="claro">
+            <span class="swatch swatch-light"></span>
+            <span>Claro<small>azul corporativo</small></span>
+          </button>
+        </div>
+      </section>
+
+      <section class="card card-data">
+        <h2>Datos</h2>
+        <div class="data-actions">
+          <button class="secondary small" id="exportConfigBtn" type="button">Exportar config</button>
+          <button class="secondary small" id="importConfigBtn" type="button">Importar config</button>
+          <button class="secondary small" id="changeDataDirBtn" type="button">Cambiar carpeta de datos</button>
+        </div>
+        <input type="file" id="configFileInput" accept=".json,application/json" hidden />
+        <p class="hint">Datos en: <code id="dataDirHint">data/</code>. Para editar datos usa el Editor de tabulador.</p>
+      </section>
+
+      <section class="card card-drive">
+        <h2>Google Drive</h2>
+        <p class="hint" id="driveStatus">Verificando…</p>
+        <div class="drive-creds" id="driveCreds">
+          <input type="text" id="driveClientId" class="search" placeholder="Client ID de Google" />
+          <input type="password" id="driveClientSecret" class="search" placeholder="Client Secret de Google" />
+          <button class="secondary small" id="driveSaveCreds" type="button">Guardar credenciales</button>
+        </div>
+        <div class="drive-actions">
+          <button class="primary small" id="driveConnect" type="button">Conectar Google Drive</button>
+          <button class="secondary small" id="driveSync" type="button">Sincronizar ahora</button>
+          <button class="secondary small" id="driveDisconnect" type="button">Desconectar</button>
+        </div>
+        <p class="hint" id="driveSyncStatus"></p>
+      </section>
+    </aside>
+
+    <section class="main-col">
+      <div class="card card-preview">
+        <h2>Vista previa</h2>
+        <div class="preview-box" id="previewBox">
+          <div class="preview-placeholder">Selecciona una ruta y pulsa <strong>Vista previa</strong>.</div>
+          <img id="previewImgInline" alt="Vista previa" hidden />
+        </div>
+        <p class="hint" id="previewMetaInline"></p>
+        <label class="switch">
+          <input type="checkbox" id="deselectAfter" />
+          <span>Deseleccionar rutas tras generar</span>
+        </label>
+        <div class="action-row">
+          <button class="primary" id="previewBtn" type="button" disabled>Vista previa</button>
+          <button class="primary" id="generateBtn" type="button" disabled>Generar imágenes</button>
+        </div>
+        <button class="secondary" id="zipBtn" type="button" disabled>Descargar todo (ZIP)</button>
+        <p class="hint">Los PNG se guardan en <code>salidas/</code></p>
+      </div>
+
+      <div class="results-head">
+        <h2>Resultados</h2>
+        <button class="link" id="clearResults" type="button">Limpiar todo</button>
+      </div>
+      <section class="results-col" id="results">
+        <div class="empty" id="emptyState">
+          <div class="empty-icon">▦</div>
+          <h3>Nada generado todavía</h3>
+          <p>Selecciona una o varias rutas y pulsa <strong>Generar imágenes</strong>.</p>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <section class="editor" id="editorView" hidden>
+    <div class="editor-head">
+      <h2>Editor de tabulador (tarifa por zona)</h2>
+      <div class="editor-controls">
+        <label for="editorTariff">Tabulador:</label>
+        <select id="editorTariff"></select>
+        <button class="secondary small" id="editorReload" type="button">Recargar</button>
+        <button class="secondary small" id="editorAddZone" type="button">Agregar zona</button>
+        <button class="secondary small" id="editorImport" type="button">Importar CSV</button>
+        <button class="secondary small" id="editorExport" type="button">Exportar CSV</button>
+        <button class="primary small" id="editorSave" type="button">Guardar tabulador</button>
+        <input type="file" id="editorCsvInput" accept=".csv,text/csv" hidden />
+      </div>
+      <p class="hint">Edita los precios directamente. Vacío = sin precio. Los cambios se guardan en el CSV de <code>data/</code>.</p>
+    </div>
+    <div class="editor-grid-wrap" id="editorWrap">
+      <p class="muted">Selecciona un tabulador…</p>
+    </div>
+    <p class="hint" id="editorStatus"></p>
+  </section>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <div class="modal" id="previewModal" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3 id="previewTitle">Vista previa</h3>
+        <button class="modal-close" id="previewClose" type="button" aria-label="Cerrar">×</button>
+      </div>
+      <div class="modal-body">
+        <img id="previewImg" alt="Vista previa" />
+        <p class="muted" id="previewMeta"></p>
+      </div>
+      <div class="modal-foot">
+        <button class="primary" id="previewGenerate" type="button">Generar esta imagen</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

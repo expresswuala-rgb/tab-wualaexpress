@@ -1,0 +1,5 @@
+node_modules/
+android/
+www/index.html.bak
+.DS_Store
+*.apk

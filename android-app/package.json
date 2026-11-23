@@ -1,0 +1,17 @@
+{
+  "name": "tabuladores-wualaexpress",
+  "version": "1.0.0",
+  "description": "Generador de tabuladores por ruta - WualaExpress (offline)",
+  "scripts": {
+    "build": "echo 'static web assets in www/'",
+    "cap:sync": "npx cap sync android",
+    "cap:open": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/android": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0"
+  }
+}
