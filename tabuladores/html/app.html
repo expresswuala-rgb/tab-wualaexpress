@@ -120,6 +120,15 @@
   .tabs { display: flex; gap: 4px; padding: 12px 24px 0; max-width: 1500px; margin: 0 auto; }
   .tab { padding: 8px 16px; border: 1px solid var(--border); border-bottom: none; border-radius: 10px 10px 0 0; background: #f3ece3; color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; }
   .tab.active { background: var(--panel); color: var(--ink); }
+  .modal { position: fixed; inset: 0; background: rgba(15, 23, 42, .6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+  .modal[hidden] { display: none; }
+  .modal-card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,.25); max-width: 96vw; max-height: 92vh; overflow: auto; width: 760px; }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .modal-head h3 { margin: 0; font-size: 15px; }
+  .modal-close { background: none; border: none; font-size: 22px; line-height: 1; cursor: pointer; color: var(--muted); }
+  .modal-body { padding: 12px 16px; text-align: center; }
+  .modal-body img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--border); }
+  .modal-body p { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
   .mobile-bar { display: none; }
   @media (max-width: 720px) {
     .mobile-bar {
@@ -177,6 +186,7 @@
     </div>
 
     <div class="block">
+      <button class="primary" id="previewBtn" type="button" disabled>Vista previa</button>
       <button class="primary" id="generateBtn" type="button" disabled>Generar imágenes</button>
       <button class="secondary" id="zipBtn" type="button" disabled>Descargar todo (ZIP)</button>
     </div>
@@ -226,6 +236,19 @@
   <button class="primary small" id="mPreviewBtn" type="button" disabled>Vista previa</button>
   <button class="primary small" id="mGenerateBtn" type="button" disabled>Generar</button>
   <button class="secondary small" id="mZipBtn" type="button" disabled>ZIP</button>
+</div>
+
+<div class="modal" id="previewModal" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="previewTitle">Vista previa</h3>
+      <button class="modal-close" id="previewClose" type="button" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <img id="previewImg" alt="Vista previa" />
+      <p class="muted" id="previewMeta"></p>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast" hidden></div>
@@ -790,6 +813,10 @@ const zipBtn = el("zipBtn");
 function allRoutes() {
   return state.tariffs.flatMap((t) => routesOf(t));
 }
+function selectedRoutes() {
+  const byId = new Map(allRoutes().map((r) => [r.id, r]));
+  return [...state.selected].map((id) => byId.get(id)).filter(Boolean);
+}
 
 function toast(message, isError = false) {
   const node = el("toast");
@@ -859,6 +886,7 @@ function renderRoutes() {
 
 function syncButtons() {
   const has = state.selected.size > 0;
+  if (previewBtn) previewBtn.disabled = !has;
   generateBtn.disabled = !has;
   zipBtn.disabled = state.selected.size === 0;
   syncMobileBar();
@@ -950,10 +978,11 @@ function addResults(items) {
     img.alt = `Tabulador salida desde ${item.name}`;
     const actions = document.createElement("div");
     actions.className = "actions";
-    const open = document.createElement("a");
-    open.href = item.url;
-    open.target = "_blank";
-    open.textContent = "Abrir PNG";
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "link";
+    open.textContent = "Ver imagen";
+    open.addEventListener("click", () => openPreviewModal(item.url, `Salida desde ${item.name}`, `${item.width}×${item.height}`));
     const dl = document.createElement("a");
     dl.href = item.url;
     dl.download = item.file;
@@ -963,7 +992,24 @@ function addResults(items) {
     remove.className = "link";
     remove.textContent = "Quitar";
     remove.addEventListener("click", () => removeResult(item));
-    actions.append(open, dl, remove);
+    // En WebView de Android, <a download> puede fallar; ofrecer compartir si está disponible.
+    if (navigator.share) {
+      const share = document.createElement("button");
+      share.type = "button";
+      share.className = "link";
+      share.textContent = "Compartir";
+      share.addEventListener("click", async () => {
+        try {
+          const res = await fetch(item.url);
+          const blob = await res.blob();
+          const file = new File([blob], item.file, { type: "image/png" });
+          await navigator.share({ files: [file], title: `Salida desde ${item.name}` });
+        } catch (e) { /* cancelado */ }
+      });
+      actions.append(open, dl, share, remove);
+    } else {
+      actions.append(open, dl, remove);
+    }
     card.append(h3, img, actions);
     card._item = item;
     resultsEl.prepend(card);
@@ -995,6 +1041,43 @@ function clearResults() {
   el("resultHint").textContent = "Marca las salidas y pulsa “Generar imágenes”.";
   toast("Resultados limpiados");
 }
+
+/* ---------- Vista previa ---------- */
+const previewModal = el("previewModal");
+const previewImg = el("previewImg");
+const previewTitle = el("previewTitle");
+const previewMeta = el("previewMeta");
+
+function openPreviewModal(src, title, meta) {
+  previewTitle.textContent = title || "Vista previa";
+  previewMeta.textContent = meta || "";
+  if (src) previewImg.src = src;
+  previewModal.hidden = false;
+}
+function closePreviewModal() {
+  previewModal.hidden = true;
+  previewImg.removeAttribute("src");
+}
+el("previewClose").addEventListener("click", closePreviewModal);
+previewModal.addEventListener("click", (e) => { if (e.target === previewModal) closePreviewModal(); });
+
+async function openPreview() {
+  const routes = selectedRoutes();
+  if (!routes.length) return;
+  const route = routes[0];
+  openPreviewModal("", `Vista previa · ${route.name}`, "Generando…");
+  try {
+    const canvas = renderRoute(route, state.style);
+    const blob = await canvasToBlob(canvas);
+    const url = URL.createObjectURL(blob);
+    openPreviewModal(url, `Vista previa · ${route.name}`, `${route.destinations.length} destinos · estilo ${state.style}`);
+  } catch (err) {
+    previewMeta.textContent = err.message;
+    toast(err.message, true);
+  }
+}
+const previewBtn = el("previewBtn");
+if (previewBtn) previewBtn.addEventListener("click", openPreview);
 
 el("clearResultsBtn").addEventListener("click", clearResults);
 
