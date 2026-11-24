@@ -1071,6 +1071,11 @@ function addResults(items) {
     const img = document.createElement("img");
     img.src = item.url;
     img.alt = `Tabulador salida desde ${item.name}`;
+    const hint = document.createElement("p");
+    hint.className = "hint";
+    hint.style.margin = "0";
+    hint.style.padding = "0 12px 8px";
+    hint.textContent = "Para guardar: mantén presionada la imagen → Guardar imagen.";
     const actions = document.createElement("div");
     actions.className = "actions";
     const open = document.createElement("button");
@@ -1085,9 +1090,26 @@ function addResults(items) {
     dl.addEventListener("click", async () => {
       dl.disabled = true;
       dl.textContent = "Guardando…";
-      // En Android, el método más confiable es compartir → "Guardar en archivos/galería"
       let saved = false;
-      if (navigator.share) {
+      // 1) Capacitor Filesystem (guarda directo en Documentos, más confiable en APK)
+      try {
+        const Cap = window.Capacitor;
+        if (Cap && Cap.Plugins && Cap.Plugins.Filesystem) {
+          const base64 = item.url.split(",")[1];
+          await Cap.Plugins.Filesystem.writeFile({
+            path: item.file,
+            data: base64,
+            directory: "DOCUMENTS",
+            recursive: true,
+          });
+          toast("✓ Guardado en Documentos. Busca el archivo en la app Archivos.");
+          saved = true;
+        }
+      } catch (e) {
+        console.error("Filesystem error:", e);
+      }
+      // 2) Web Share API (Android WebView)
+      if (!saved && navigator.share) {
         try {
           const res = await fetch(item.url);
           const blob = await res.blob();
@@ -1096,31 +1118,10 @@ function addResults(items) {
           toast("✓ Imagen compartida/guardada");
           saved = true;
         } catch (e) {
-          if (e.name === "AbortError") { saved = true; } // cancelado por el usuario
+          if (e.name === "AbortError") saved = true; // cancelado
         }
       }
-      if (!saved) {
-        try {
-          const Cap = window.Capacitor;
-          if (Cap && Cap.Plugins && Cap.Plugins.Filesystem) {
-            const res = await fetch(item.url);
-            const blob = await res.blob();
-            const base64 = await new Promise((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result.split(",")[1]);
-              reader.readAsDataURL(blob);
-            });
-            await Cap.Plugins.Filesystem.writeFile({
-              path: item.file,
-              data: base64,
-              directory: "DOCUMENTS",
-              recursive: true,
-            });
-            toast("✓ Guardado en Documentos. Busca el archivo en la app Archivos.");
-            saved = true;
-          }
-        } catch (e) { /* fallar al siguiente */ }
-      }
+      // 3) Método clásico
       if (!saved) {
         try {
           const a = document.createElement("a");
@@ -1141,7 +1142,7 @@ function addResults(items) {
     remove.textContent = "Quitar";
     remove.addEventListener("click", () => removeResult(item));
     actions.append(open, dl, remove);
-    card.append(h3, img, actions);
+    card.append(h3, img, hint, actions);
     card._item = item;
     resultsEl.prepend(card);
   }
