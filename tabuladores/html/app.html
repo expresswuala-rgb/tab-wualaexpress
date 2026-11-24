@@ -999,7 +999,28 @@ function addResults(items) {
     dl.className = "link";
     dl.textContent = "Descargar";
     dl.addEventListener("click", async () => {
-      // En Android/WebView, <a download> puede no funcionar; intentar compartir primero.
+      // 1) Capacitor Filesystem (si está disponible en el APK)
+      try {
+        const Cap = window.Capacitor;
+        if (Cap && Cap.Plugins && Cap.Plugins.Filesystem) {
+          const res = await fetch(item.url);
+          const blob = await res.blob();
+          const base64 = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result.split(",")[1]);
+            reader.readAsDataURL(blob);
+          });
+          await Cap.Plugins.Filesystem.writeFile({
+            path: item.file,
+            data: base64,
+            directory: "DOCUMENTS",
+            recursive: true,
+          });
+          toast("Imagen guardada en Documentos");
+          return;
+        }
+      } catch (e) { /* fallar al siguiente método */ }
+      // 2) Web Share API (Android WebView)
       if (navigator.share) {
         try {
           const res = await fetch(item.url);
@@ -1007,12 +1028,18 @@ function addResults(items) {
           const file = new File([blob], item.file, { type: "image/png" });
           await navigator.share({ files: [file], title: `Salida desde ${item.name}` });
           return;
-        } catch (e) { /* cancelado o no soportado, caer al método clásico */ }
+        } catch (e) { /* cancelado o no soportado */ }
       }
-      const a = document.createElement("a");
-      a.href = item.url;
-      a.download = item.file;
-      a.click();
+      // 3) Método clásico
+      try {
+        const a = document.createElement("a");
+        a.href = item.url;
+        a.download = item.file;
+        a.click();
+        toast("Si no se descargó, mantén presionada la imagen para guardarla.");
+      } catch (e) {
+        toast("Mantén presionada la imagen para guardarla en la galería.", true);
+      }
     });
     const remove = document.createElement("button");
     remove.type = "button";
@@ -1074,18 +1101,42 @@ el("modalSaveBtn").addEventListener("click", async () => {
   const src = previewImg.getAttribute("src");
   if (!src) return;
   const title = previewTitle.textContent || "imagen";
+  const filename = "tabulador.png";
+  // 1) Capacitor Filesystem
+  try {
+    const Cap = window.Capacitor;
+    if (Cap && Cap.Plugins && Cap.Plugins.Filesystem) {
+      const res = await fetch(src);
+      const blob = await res.blob();
+      const base64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(",")[1]);
+        reader.readAsDataURL(blob);
+      });
+      await Cap.Plugins.Filesystem.writeFile({
+        path: filename,
+        data: base64,
+        directory: "DOCUMENTS",
+        recursive: true,
+      });
+      toast("Imagen guardada en Documentos");
+      return;
+    }
+  } catch (e) { /* fallar al siguiente */ }
+  // 2) Web Share API
   if (navigator.share) {
     try {
       const res = await fetch(src);
       const blob = await res.blob();
-      const file = new File([blob], "tabulador.png", { type: "image/png" });
+      const file = new File([blob], filename, { type: "image/png" });
       await navigator.share({ files: [file], title });
       return;
     } catch (e) { /* cancelado */ }
   }
+  // 3) Clásico
   const a = document.createElement("a");
   a.href = src;
-  a.download = "tabulador.png";
+  a.download = filename;
   a.click();
   toast("Si no se descargó, mantén presionada la imagen para guardarla.");
 });
