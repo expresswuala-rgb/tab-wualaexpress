@@ -46,7 +46,7 @@
   aside.panel { position: sticky; top: 16px; align-self: start; max-height: calc(100vh - 32px); display: flex; flex-direction: column; }
   h2 { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
   .block + .block { margin-top: 18px; }
-  .routes { overflow: auto; flex: 1; min-height: 120px; border: 1px solid var(--border); border-radius: 10px; }
+  .routes { overflow: auto; flex: 1; min-height: 120px; max-height: 360px; border: 1px solid var(--border); border-radius: 10px; }
   .group-head { padding: 10px 12px; background: #faf8f5; border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 600; }
   .group-head span { display: block; font-weight: 400; color: var(--muted); font-size: 11px; }
   .route-item { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-bottom: 1px solid #f2efe9; font-size: 12px; }
@@ -209,6 +209,7 @@
         <h2>Rutas (salidas)</h2>
         <button class="link" id="toggleAll" type="button">Todas</button>
       </div>
+      <input type="search" id="routeSearch" class="search" placeholder="Buscar ruta…" autocomplete="off" />
       <div class="routes" id="routeList"></div>
       <p class="hint" id="routeCount"></p>
     </div>
@@ -860,6 +861,7 @@ const state = {
   selected: new Set(),
   style: "oscuro",
   generated: [],
+  search: "",
 };
 const el = (id) => document.getElementById(id);
 const routeList = el("routeList");
@@ -903,17 +905,22 @@ function renderRoutes() {
     el("routeCount").textContent = "";
     return;
   }
+  const q = state.search.trim().toLowerCase();
+  let visibleCount = 0;
   for (const tariff of state.tariffs) {
+    const groupRoutes = routesOf(tariff).filter((r) => !q || r.name.toLowerCase().includes(q) || tariff.name.toLowerCase().includes(q));
+    if (groupRoutes.length === 0 && q) continue;
     const group = document.createElement("div");
     group.className = "route-group";
     const head = document.createElement("div");
     head.className = "group-head";
     head.textContent = tariff.name;
     const sub = document.createElement("span");
-    sub.textContent = `${tariff.origins.length} salidas · ${tariff.zones.length} destinos`;
+    sub.textContent = `${groupRoutes.length} de ${tariff.origins.length} salidas · ${tariff.zones.length} destinos`;
     head.appendChild(sub);
     group.appendChild(head);
-    routesOf(tariff).forEach((route) => {
+    groupRoutes.forEach((route) => {
+      visibleCount++;
       const row = document.createElement("div");
       row.className = "route-item";
       const input = document.createElement("input");
@@ -938,7 +945,9 @@ function renderRoutes() {
     });
     routeList.appendChild(group);
   }
-  el("routeCount").textContent = `${routes.length} ruta${routes.length === 1 ? "" : "s"} en total`;
+  el("routeCount").textContent = q
+    ? `${visibleCount} de ${routes.length} rutas`
+    : `${routes.length} ruta${routes.length === 1 ? "" : "s"}`;
 }
 
 function syncButtons() {
@@ -956,6 +965,13 @@ el("toggleAll").addEventListener("click", () => {
   renderRoutes();
   syncButtons();
 });
+const routeSearchEl = el("routeSearch");
+if (routeSearchEl) {
+  routeSearchEl.addEventListener("input", (e) => {
+    state.search = e.target.value;
+    renderRoutes();
+  });
+}
 
 el("stylePicker").addEventListener("click", (event) => {
   const button = event.target.closest(".style-card");
