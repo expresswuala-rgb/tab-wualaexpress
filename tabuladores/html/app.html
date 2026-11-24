@@ -1001,50 +1001,57 @@ function addResults(items) {
     dl.className = "link";
     dl.textContent = "Descargar";
     dl.addEventListener("click", async () => {
-      toast("Guardando imagen…");
+      dl.disabled = true;
+      dl.textContent = "Guardando…";
       // En Android, el método más confiable es compartir → "Guardar en archivos/galería"
+      let saved = false;
       if (navigator.share) {
         try {
           const res = await fetch(item.url);
           const blob = await res.blob();
           const file = new File([blob], item.file, { type: "image/png" });
           await navigator.share({ files: [file], title: `Salida desde ${item.name}` });
-          return;
+          toast("✓ Imagen compartida/guardada");
+          saved = true;
         } catch (e) {
-          if (e.name !== "AbortError") {
-            // compartir falló por otra razón, intentar método clásico
-          } else {
-            return; // usuario canceló
-          }
+          if (e.name === "AbortError") { saved = true; } // cancelado por el usuario
         }
       }
-      // Capacitor Filesystem (si está disponible)
-      try {
-        const Cap = window.Capacitor;
-        if (Cap && Cap.Plugins && Cap.Plugins.Filesystem) {
-          const res = await fetch(item.url);
-          const blob = await res.blob();
-          const base64 = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result.split(",")[1]);
-            reader.readAsDataURL(blob);
-          });
-          await Cap.Plugins.Filesystem.writeFile({
-            path: item.file,
-            data: base64,
-            directory: "DOCUMENTS",
-            recursive: true,
-          });
-          toast("Guardado en Documentos. Busca el archivo en la app Archivos.");
-          return;
+      if (!saved) {
+        try {
+          const Cap = window.Capacitor;
+          if (Cap && Cap.Plugins && Cap.Plugins.Filesystem) {
+            const res = await fetch(item.url);
+            const blob = await res.blob();
+            const base64 = await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result.split(",")[1]);
+              reader.readAsDataURL(blob);
+            });
+            await Cap.Plugins.Filesystem.writeFile({
+              path: item.file,
+              data: base64,
+              directory: "DOCUMENTS",
+              recursive: true,
+            });
+            toast("✓ Guardado en Documentos. Busca el archivo en la app Archivos.");
+            saved = true;
+          }
+        } catch (e) { /* fallar al siguiente */ }
+      }
+      if (!saved) {
+        try {
+          const a = document.createElement("a");
+          a.href = item.url;
+          a.download = item.file;
+          a.click();
+          toast("Descarga iniciada. Si no aparece: mantén presionada la imagen → Guardar imagen.");
+        } catch (e) {
+          toast("Mantén presionada la imagen → Guardar imagen.", true);
         }
-      } catch (e) { /* fallar al siguiente */ }
-      // Método clásico
-      const a = document.createElement("a");
-      a.href = item.url;
-      a.download = item.file;
-      a.click();
-      toast("Descarga iniciada. Si no aparece, mantén presionada la imagen → Guardar imagen.");
+      }
+      dl.disabled = false;
+      dl.textContent = "Descargar";
     });
     const remove = document.createElement("button");
     remove.type = "button";
@@ -1107,6 +1114,10 @@ el("modalSaveBtn").addEventListener("click", async () => {
   if (!src) return;
   const title = previewTitle.textContent || "imagen";
   const filename = "tabulador.png";
+  const btn = el("modalSaveBtn");
+  btn.disabled = true;
+  btn.textContent = "Guardando…";
+  let saved = false;
   // 1) Web Share API (más confiable en Android)
   if (navigator.share) {
     try {
@@ -1114,9 +1125,10 @@ el("modalSaveBtn").addEventListener("click", async () => {
       const blob = await res.blob();
       const file = new File([blob], filename, { type: "image/png" });
       await navigator.share({ files: [file], title });
-      return;
+      toast("✓ Imagen compartida/guardada");
+      saved = true;
     } catch (e) {
-      if (e.name === "AbortError") return; // cancelado
+      if (e.name === "AbortError") saved = true; // cancelado
     }
   }
   // 2) Capacitor Filesystem
@@ -1136,16 +1148,19 @@ el("modalSaveBtn").addEventListener("click", async () => {
         directory: "DOCUMENTS",
         recursive: true,
       });
-      toast("Guardado en Documentos. Busca el archivo en la app Archivos.");
-      return;
+      toast("✓ Guardado en Documentos. Busca el archivo en la app Archivos.");
+      saved = true;
     }
   } catch (e) { /* fallar al siguiente */ }
-  // 3) Clásico
-  const a = document.createElement("a");
-  a.href = src;
-  a.download = filename;
-  a.click();
-  toast("Descarga iniciada. Si no aparece, mantén presionada la imagen → Guardar imagen.");
+  if (!saved) {
+    const a = document.createElement("a");
+    a.href = src;
+    a.download = filename;
+    a.click();
+    toast("Descarga iniciada. Si no aparece: mantén presionada la imagen → Guardar imagen.");
+  }
+  btn.disabled = false;
+  btn.textContent = "Guardar imagen";
 });
 
 async function openPreview() {
