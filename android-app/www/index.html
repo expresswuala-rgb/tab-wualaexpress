@@ -102,6 +102,20 @@
   .file-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
   .file-row input[type=file] { width: 100%; font-size: 11px; }
   [hidden] { display: none !important; }
+  .downloads { padding: 20px 24px 60px; max-width: 1500px; margin: 0 auto; }
+  .downloads-head { margin-bottom: 14px; }
+  .downloads-head h2 { margin: 0 0 4px; font-size: 17px; }
+  .downloads-list { display: flex; flex-direction: column; gap: 10px; }
+  .download-item {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    padding: 10px; box-shadow: var(--shadow);
+  }
+  .download-thumb { width: 80px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+  .download-info { flex: 1; min-width: 0; }
+  .download-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .download-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .download-actions { display: flex; gap: 6px; flex-wrap: wrap; }
   .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
   .search {
     width: 100%; padding: 10px 14px 10px 36px;
@@ -191,6 +205,7 @@
 
 <nav class="tabs">
   <button class="tab active" data-tab="generate" type="button">Generar imágenes</button>
+  <button class="tab" data-tab="downloads" type="button">Descargas</button>
   <button class="tab" data-tab="editor" type="button">Editor de tabulador</button>
 </nav>
 
@@ -249,6 +264,20 @@
     </div>
   </section>
 </main>
+
+<section class="downloads" id="downloadsView" hidden>
+  <div class="downloads-head">
+    <h2>Descargas</h2>
+    <p class="hint" id="downloadsHint">Las imágenes generadas aparecen aquí.</p>
+  </div>
+  <div class="downloads-list" id="downloadsList">
+    <div class="empty" id="downloadsEmpty">
+      <div class="empty-icon">▦</div>
+      <h3>Sin descargas</h3>
+      <p>Genera imágenes y aparecerán aquí para abrir o compartir.</p>
+    </div>
+  </div>
+</section>
 
 <section class="editor" id="editorView" hidden>
   <div class="editor-head">
@@ -1141,6 +1170,7 @@ function clearResults() {
   state.generated = [];
   resultsEl.innerHTML = '<div class="empty" id="emptyState">Aún no hay imágenes. Selecciona una o varias rutas y genera.</div>';
   el("resultHint").textContent = "Marca las salidas y pulsa “Generar imágenes”.";
+  if (!document.getElementById("downloadsView").hidden) renderDownloads();
   toast("Resultados limpiados");
 }
 
@@ -1232,6 +1262,78 @@ async function openPreview() {
 }
 const previewBtn = el("previewBtn");
 if (previewBtn) previewBtn.addEventListener("click", openPreview);
+
+function renderDownloads() {
+  const list = el("downloadsList");
+  const hint = el("downloadsHint");
+  list.innerHTML = "";
+  if (!state.generated.length) {
+    list.innerHTML = '<div class="empty" id="downloadsEmpty"><div class="empty-icon">▦</div><h3>Sin descargas</h3><p>Genera imágenes y aparecerán aquí para abrir o compartir.</p></div>';
+    if (hint) hint.textContent = "Las imágenes generadas aparecen aquí.";
+    return;
+  }
+  if (hint) hint.textContent = `${state.generated.length} imagen${state.generated.length === 1 ? "" : "es"} disponible${state.generated.length === 1 ? "" : "s"}.`;
+  for (const item of state.generated) {
+    const row = document.createElement("div");
+    row.className = "download-item";
+    const thumb = document.createElement("img");
+    thumb.src = item.url;
+    thumb.alt = item.name;
+    thumb.className = "download-thumb";
+    const info = document.createElement("div");
+    info.className = "download-info";
+    const title = document.createElement("div");
+    title.className = "download-title";
+    title.textContent = `Salida desde ${item.name}`;
+    const meta = document.createElement("div");
+    meta.className = "download-meta";
+    meta.textContent = `${item.width}×${item.height}`;
+    info.append(title, meta);
+    const actions = document.createElement("div");
+    actions.className = "download-actions";
+    const openBtn = document.createElement("button");
+    openBtn.type = "button";
+    openBtn.className = "primary small";
+    openBtn.textContent = "Abrir";
+    openBtn.addEventListener("click", () => openPreviewModal(item.url, `Salida desde ${item.name}`, `${item.width}×${item.height}`));
+    const shareBtn = document.createElement("button");
+    shareBtn.type = "button";
+    shareBtn.className = "secondary small";
+    shareBtn.textContent = "Compartir";
+    shareBtn.addEventListener("click", async () => {
+      if (navigator.share) {
+        try {
+          const res = await fetch(item.url);
+          const blob = await res.blob();
+          const file = new File([blob], item.file, { type: "image/png" });
+          await navigator.share({ files: [file], title: `Salida desde ${item.name}` });
+          return;
+        } catch (e) { if (e.name === "AbortError") return; }
+      }
+      // fallback
+      const a = document.createElement("a");
+      a.href = item.url;
+      a.download = item.file;
+      a.click();
+      toast("Si no se descargó, mantén presionada la imagen → Guardar imagen.");
+    });
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "link";
+    removeBtn.textContent = "Quitar";
+    removeBtn.addEventListener("click", () => { removeResult(item); renderDownloads(); });
+    actions.append(openBtn, shareBtn, removeBtn);
+    row.append(thumb, info, actions);
+    list.appendChild(row);
+  }
+}
+
+// update downloads list when results change
+const _origAddResults = addResults;
+addResults = function (items) {
+  _origAddResults(items);
+  if (!document.getElementById("downloadsView").hidden) renderDownloads();
+};
 
 el("clearResultsBtn").addEventListener("click", clearResults);
 
@@ -1359,8 +1461,10 @@ function switchTab(tab) {
   document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   document.querySelectorAll(".bottom-nav-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   document.getElementById("generateView").hidden = tab !== "generate";
+  document.getElementById("downloadsView").hidden = tab !== "downloads";
   document.getElementById("editorView").hidden = tab !== "editor";
   if (tab === "editor") loadEditorGrid();
+  if (tab === "downloads") renderDownloads();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 document.querySelectorAll(".tab").forEach((btn) => {
