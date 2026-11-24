@@ -6,37 +6,42 @@
 <title>Tabuladores · WualaExpress (HTML)</title>
 <style>
   :root {
-    --ink: #1d2430;
-    --muted: #7a8494;
-    --border: #e4e0da;
+    --ink: #1f1f1f;
+    --muted: #5f6368;
+    --border: #dadce0;
     --panel: #ffffff;
-    --bg: #f7f6f3;
-    --primary: #dd6b12;
-    --primary-dark: #a84e08;
-    --shadow: 0 4px 18px rgba(30, 25, 20, .08);
+    --bg: #f8f9fa;
+    --primary: #1a73e8;
+    --primary-dark: #1557b0;
+    --primary-soft: rgba(26, 115, 232, .08);
+    --accent: #e8710a;
+    --shadow: 0 1px 3px rgba(60, 64, 67, .12), 0 4px 12px rgba(60, 64, 67, .08);
+    --radius: 16px;
+    --radius-sm: 10px;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; }
   body {
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    font-family: "Google Sans", "Roboto", "Segoe UI", system-ui, -apple-system, sans-serif;
     background: var(--bg);
     color: var(--ink);
     min-height: 100vh;
   }
   header.top {
     display: flex; align-items: center; gap: 14px;
-    padding: 16px 24px; background: #fff; border-bottom: 1px solid var(--border);
+    padding: 12px 20px; background: #fff; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10;
   }
-  header.top img { width: 44px; height: 44px; object-fit: contain; }
-  header.top h1 { font-size: 19px; margin: 0; }
-  header.top p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+  header.top img { width: 40px; height: 40px; object-fit: contain; border-radius: 8px; }
+  header.top h1 { font-size: 18px; margin: 0; font-weight: 600; letter-spacing: -.2px; }
+  header.top p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
   main {
     display: grid; grid-template-columns: 330px minmax(0, 1fr);
     gap: 20px; padding: 20px; max-width: 1500px; margin: 0 auto;
   }
   .panel {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
-    box-shadow: var(--shadow); padding: 16px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 20px;
+    box-shadow: var(--shadow); padding: 18px;
   }
   aside.panel { position: sticky; top: 16px; align-self: start; max-height: calc(100vh - 32px); display: flex; flex-direction: column; }
   h2 { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
@@ -54,29 +59,34 @@
   .link { background: none; border: 0; color: var(--primary-dark); font: inherit; font-size: 12px; cursor: pointer; padding: 0; }
   .styles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .style-card {
-    display: flex; align-items: center; gap: 8px; padding: 8px;
-    border: 1px solid var(--border); border-radius: 10px; background: #fff;
-    cursor: pointer; font-size: 12px; text-align: left; color: var(--ink);
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    border: 1px solid var(--border); border-radius: 12px; background: #fff;
+    cursor: pointer; font-size: 13px; text-align: left; color: var(--ink);
+    transition: all .15s;
   }
-  .style-card small { display: block; color: var(--muted); font-size: 10px; }
-  .style-card.active { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(221,107,18,.15); }
+  .style-card:hover { background: #f8f9fa; }
+  .style-card small { display: block; color: var(--muted); font-size: 11px; }
+  .style-card.active { border-color: var(--primary); background: var(--primary-soft); box-shadow: 0 0 0 2px rgba(26,115,232,.12); }
   .swatch { width: 22px; height: 34px; border-radius: 5px; flex: none; }
   .swatch-dark { background: linear-gradient(#0d1a34, #0a3a70 70%, #aa102c 71%); }
   .swatch-light { background: linear-gradient(#eff6ff 0 60%, #1e3a8a 60%); }
   button.primary, button.secondary {
-    width: 100%; border-radius: 10px; padding: 11px 14px; font: inherit; font-weight: 600;
-    cursor: pointer; border: 1px solid transparent; font-size: 13px;
+    width: 100%; border-radius: 24px; padding: 11px 20px; font: inherit; font-weight: 500;
+    cursor: pointer; border: none; font-size: 14px; transition: background .15s, box-shadow .15s;
   }
-  button.primary { background: var(--primary); color: #fff; }
+  button.primary { background: var(--primary); color: #fff; box-shadow: 0 1px 3px rgba(26,115,232,.3); }
   button.primary:hover { background: var(--primary-dark); }
-  button.secondary { background: #fff; border-color: var(--border); color: var(--ink); margin-top: 8px; }
-  button.primary:disabled, button.secondary:disabled { opacity: .5; cursor: default; }
+  button.secondary { background: #f1f3f4; color: var(--primary-dark); margin-top: 8px; }
+  button.secondary:hover { background: #e8eaed; }
+  button.primary:disabled, button.secondary:disabled { opacity: .4; cursor: not-allowed; }
+  button.small { padding: 8px 16px; font-size: 12px; border-radius: 20px; }
   .results { min-width: 0; }
   .results-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; gap: 12px; flex-wrap: wrap; }
   .results-head p { margin: 0; color: var(--muted); font-size: 13px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-  .card { background: #fff; border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
-  .card h3 { margin: 0; font-size: 13px; padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; transition: box-shadow .15s; }
+  .card:hover { box-shadow: 0 2px 8px rgba(60,64,67,.15), 0 8px 24px rgba(60,64,67,.1); }
+  .card h3 { margin: 0; font-size: 14px; padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 8px; align-items: center; font-weight: 500; }
   .card h3 span { color: var(--muted); font-weight: 400; font-size: 11px; }
   .card img { display: block; width: 100%; height: auto; background: #fff; }
   .actions { display: flex; gap: 14px; padding: 10px 14px; border-top: 1px solid var(--border); font-size: 12px; }
@@ -136,7 +146,31 @@
     .modal-close { font-size: 28px; padding: 4px 8px; }
     .modal-body img { max-height: 75vh; }
   }
+  .bottom-nav { display: none; }
   .mobile-bar { display: none; }
+  @media (max-width: 720px) {
+    .tabs { display: none; }
+    .bottom-nav {
+      display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 60;
+      background: #fff; border-top: 1px solid var(--border);
+      padding: 6px 0 env(safe-area-inset-bottom, 6px);
+      box-shadow: 0 -2px 10px rgba(0,0,0,.06);
+    }
+    .bottom-nav-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+      background: none; border: none; padding: 6px 4px; cursor: pointer;
+      color: var(--muted); font-size: 10px; font-weight: 500;
+      transition: color .15s;
+    }
+    .bottom-nav-btn.active { color: var(--primary); }
+    .bottom-nav-icon { font-size: 20px; line-height: 1; }
+    body { padding-bottom: 64px; }
+    .route-item { min-height: 44px; }
+    .style-card { min-height: 44px; }
+    input, select, button { font-size: 16px; }
+    .preview-box img { max-height: 50vh; }
+    .mobile-bar { display: none; }
+  }
   @media (max-width: 720px) {
     .mobile-bar {
       display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
@@ -262,6 +296,17 @@
     </div>
   </div>
 </div>
+
+<nav class="bottom-nav" id="bottomNav">
+  <button class="bottom-nav-btn active" data-tab="generate" type="button">
+    <span class="bottom-nav-icon">▦</span>
+    <span>Generar</span>
+  </button>
+  <button class="bottom-nav-btn" data-tab="editor" type="button">
+    <span class="bottom-nav-icon">✎</span>
+    <span>Editor</span>
+  </button>
+</nav>
 
 <div class="toast" id="toast" hidden></div>
 
@@ -1302,14 +1347,19 @@ zipBtn.addEventListener("click", async () => {
 });
 
 /* ---------- Pestañas ---------- */
+function switchTab(tab) {
+  document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+  document.querySelectorAll(".bottom-nav-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+  document.getElementById("generateView").hidden = tab !== "generate";
+  document.getElementById("editorView").hidden = tab !== "editor";
+  if (tab === "editor") loadEditorGrid();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
 document.querySelectorAll(".tab").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b === btn));
-    const tab = btn.dataset.tab;
-    document.getElementById("generateView").hidden = tab !== "generate";
-    document.getElementById("editorView").hidden = tab !== "editor";
-    if (tab === "editor") loadEditorGrid();
-  });
+  btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+});
+document.querySelectorAll(".bottom-nav-btn").forEach((btn) => {
+  btn.addEventListener("click", () => switchTab(btn.dataset.tab));
 });
 
 /* ---------- Editor de tabulador ---------- */
