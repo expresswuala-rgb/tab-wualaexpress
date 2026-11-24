@@ -102,6 +102,17 @@
   .file-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
   .file-row input[type=file] { width: 100%; font-size: 11px; }
   [hidden] { display: none !important; }
+  .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+  .search {
+    width: 100%; padding: 10px 14px 10px 36px;
+    border: 1px solid var(--border); border-radius: 24px;
+    font-size: 13px; background: #f1f3f4; color: var(--ink);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%235f6368' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.242 1.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: 12px center;
+    transition: background .15s, box-shadow .15s;
+  }
+  .search:focus { outline: none; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .search::placeholder { color: var(--muted); }
   .editor { padding: 20px 24px 60px; max-width: 1500px; margin: 0 auto; }
   .editor-head { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
   .editor-head h2 { margin: 0; font-size: 17px; }
@@ -149,42 +160,23 @@
   .bottom-nav { display: none; }
   .mobile-bar { display: none; }
   @media (max-width: 720px) {
-    .tabs { display: none; }
-    .bottom-nav {
-      display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 60;
-      background: #fff; border-top: 1px solid var(--border);
-      padding: 6px 0 env(safe-area-inset-bottom, 6px);
-      box-shadow: 0 -2px 10px rgba(0,0,0,.06);
-    }
-    .bottom-nav-btn {
-      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
-      background: none; border: none; padding: 6px 4px; cursor: pointer;
-      color: var(--muted); font-size: 10px; font-weight: 500;
-      transition: color .15s;
-    }
-    .bottom-nav-btn.active { color: var(--primary); }
-    .bottom-nav-icon { font-size: 20px; line-height: 1; }
-    body { padding-bottom: 64px; }
-    .route-item { min-height: 44px; }
-    .style-card { min-height: 44px; }
-    input, select, button { font-size: 16px; }
-    .preview-box img { max-height: 50vh; }
-    .mobile-bar { display: none; }
-  }
-  @media (max-width: 720px) {
-    .mobile-bar {
+    .bottom-nav { display: none; }
+    .action-bar {
       display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
       padding: 10px 12px; background: rgba(255,255,255,.96);
       border-top: 1px solid var(--border); backdrop-filter: blur(8px);
+      box-shadow: 0 -2px 10px rgba(0,0,0,.06);
     }
-    .mobile-bar button { min-height: 48px; font-size: 13px; }
+    .action-bar button { min-height: 48px; font-size: 13px; }
     body { padding-bottom: 76px; }
     .route-item { min-height: 48px; }
     .style-card { min-height: 48px; }
     input, select, button { font-size: 16px; }
     .preview-box img { max-height: 50vh; }
     .action-row, #zipBtn { display: none; }
+    .tabs { display: flex; gap: 4px; overflow-x: auto; padding: 8px 12px 0; }
+    .tab { padding: 6px 12px; font-size: 12px; white-space: nowrap; }
   }
 </style>
 </head>
@@ -275,10 +267,10 @@
   <p class="hint" id="editorStatus"></p>
 </section>
 
-<div class="mobile-bar" id="mobileBar">
-  <button class="primary small" id="mPreviewBtn" type="button" disabled>Vista previa</button>
-  <button class="primary small" id="mGenerateBtn" type="button" disabled>Generar</button>
-  <button class="secondary small" id="mZipBtn" type="button" disabled>ZIP</button>
+<div class="action-bar" id="actionBar">
+  <button class="primary small" id="aPreviewBtn" type="button" disabled>Vista previa</button>
+  <button class="primary small" id="aGenerateBtn" type="button" disabled>Generar</button>
+  <button class="secondary small" id="aZipBtn" type="button" disabled>ZIP</button>
 </div>
 
 <div class="modal" id="previewModal" hidden>
@@ -955,7 +947,7 @@ function syncButtons() {
   if (previewBtn) previewBtn.disabled = !has;
   generateBtn.disabled = !has;
   zipBtn.disabled = state.selected.size === 0;
-  syncMobileBar();
+  syncActionBar();
 }
 
 el("toggleAll").addEventListener("click", () => {
@@ -1527,20 +1519,19 @@ el("editorExport").addEventListener("click", () => {
 });
 
 /* ---------- Barra móvil ---------- */
-const mPreviewBtn = el("mPreviewBtn");
-const mGenerateBtn = el("mGenerateBtn");
-const mZipBtn = el("mZipBtn");
-if (mPreviewBtn) mPreviewBtn.addEventListener("click", () => previewBtn.click());
-if (mGenerateBtn) mGenerateBtn.addEventListener("click", () => generateBtn.click());
-if (mZipBtn) mZipBtn.addEventListener("click", () => zipBtn.click());
-// mantener disabled sincronizado
-function syncMobileBar() {
+const aPreviewBtn = el("aPreviewBtn");
+const aGenerateBtn = el("aGenerateBtn");
+const aZipBtn = el("aZipBtn");
+if (aPreviewBtn) aPreviewBtn.addEventListener("click", () => previewBtn.click());
+if (aGenerateBtn) aGenerateBtn.addEventListener("click", () => generateBtn.click());
+if (aZipBtn) aZipBtn.addEventListener("click", () => zipBtn.click());
+function syncActionBar() {
   const has = state.selected.size > 0;
-  if (mPreviewBtn) mPreviewBtn.disabled = !has;
-  if (mGenerateBtn) mGenerateBtn.disabled = !has;
-  if (mZipBtn) mZipBtn.disabled = state.selected.size === 0;
+  if (aPreviewBtn) aPreviewBtn.disabled = !has;
+  if (aGenerateBtn) aGenerateBtn.disabled = !has;
+  if (aZipBtn) aZipBtn.disabled = state.selected.size === 0;
 }
-syncMobileBar();
+syncActionBar();
 
 /* ---------- Arranque ---------- */
 const embedded = loadTariff(EMBEDDED_CSV, "tabulador.csv");
