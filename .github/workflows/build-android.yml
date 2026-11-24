@@ -51,21 +51,8 @@ jobs:
       - name: Add storage permissions to manifest
         working-directory: android-app
         run: |
-          MANIFEST="android/app/src/main/AndroidManifest.xml"
-          python3 - <<'PY'
-          import re
-          p = "android/app/src/main/AndroidManifest.xml"
-          s = open(p).read()
-          perms = '''    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />'''
-          if "WRITE_EXTERNAL_STORAGE" not in s:
-              s = s.replace("<application", perms + "\\n\\n  <application", 1)
-          open(p, "w").write(s)
-          print("Manifest patched")
-          PY
-          cat "$MANIFEST"
+          python3 patch_manifest.py
+          cat android/app/src/main/AndroidManifest.xml
 
       - name: Sync web assets
         working-directory: android-app
