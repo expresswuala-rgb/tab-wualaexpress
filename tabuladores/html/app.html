@@ -92,6 +92,19 @@
   .file-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
   .file-row input[type=file] { width: 100%; font-size: 11px; }
   [hidden] { display: none !important; }
+  .editor { padding: 20px 24px 60px; max-width: 1500px; margin: 0 auto; }
+  .editor-head { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+  .editor-head h2 { margin: 0; font-size: 17px; }
+  .editor-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .editor-controls label { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .editor-controls select { padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: #fff; color: var(--ink); }
+  .editor-grid-wrap { overflow: auto; max-height: 72vh; border: 1px solid var(--border); border-radius: 14px; background: var(--panel); }
+  .zone-grid { border-collapse: collapse; font-size: 12px; width: 100%; }
+  .zone-grid th, .zone-grid td { border: 1px solid var(--border); padding: 4px; text-align: center; white-space: nowrap; }
+  .zone-grid th { background: #f3ece3; color: var(--ink); font-weight: 700; position: sticky; top: 0; z-index: 2; }
+  .zone-grid .rowhead { background: #f3ece3; color: var(--ink); font-weight: 700; text-align: left; position: sticky; left: 0; z-index: 1; min-width: 140px; }
+  .zone-grid .corner { position: sticky; left: 0; top: 0; z-index: 3; background: #e8dfd2; }
+  .zone-grid input { width: 58px; padding: 4px 2px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; text-align: center; background: #fff; color: var(--ink); }
   @media (max-width: 900px) {
     main { grid-template-columns: 1fr; }
     aside.panel { position: static; max-height: none; }
@@ -104,6 +117,9 @@
     font-style: normal;
     font-display: swap;
   }
+  .tabs { display: flex; gap: 4px; padding: 12px 24px 0; max-width: 1500px; margin: 0 auto; }
+  .tab { padding: 8px 16px; border: 1px solid var(--border); border-bottom: none; border-radius: 10px 10px 0 0; background: #f3ece3; color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .tab.active { background: var(--panel); color: var(--ink); }
   .mobile-bar { display: none; }
   @media (max-width: 720px) {
     .mobile-bar {
@@ -130,7 +146,12 @@
   </div>
 </header>
 
-<main>
+<nav class="tabs">
+  <button class="tab active" data-tab="generate" type="button">Generar imágenes</button>
+  <button class="tab" data-tab="editor" type="button">Editor de tabulador</button>
+</nav>
+
+<main id="generateView">
   <aside class="panel">
     <div class="block">
       <div class="row-head">
@@ -183,6 +204,23 @@
     </div>
   </section>
 </main>
+
+<section class="editor" id="editorView" hidden>
+  <div class="editor-head">
+    <h2>Editor de tabulador (tarifa por zona)</h2>
+    <div class="editor-controls">
+      <button class="secondary small" id="editorReload" type="button">Recargar</button>
+      <button class="secondary small" id="editorAddZone" type="button">Agregar zona</button>
+      <button class="secondary small" id="editorExport" type="button">Exportar CSV</button>
+      <button class="primary small" id="editorSave" type="button">Guardar tabulador</button>
+    </div>
+    <p class="hint">Edita los precios directamente. Vacío = sin precio. Guardar descarga el CSV actualizado.</p>
+  </div>
+  <div class="editor-grid-wrap" id="editorWrap">
+    <p class="muted">Cargando…</p>
+  </div>
+  <p class="hint" id="editorStatus"></p>
+</section>
 
 <div class="mobile-bar" id="mobileBar">
   <button class="primary small" id="mPreviewBtn" type="button" disabled>Vista previa</button>
@@ -1077,6 +1115,165 @@ zipBtn.addEventListener("click", async () => {
     zipBtn.textContent = "Descargar todo (ZIP)";
     syncButtons();
   }
+});
+
+/* ---------- Pestañas ---------- */
+document.querySelectorAll(".tab").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b === btn));
+    const tab = btn.dataset.tab;
+    document.getElementById("generateView").hidden = tab !== "generate";
+    document.getElementById("editorView").hidden = tab !== "editor";
+    if (tab === "editor") loadEditorGrid();
+  });
+});
+
+/* ---------- Editor de tabulador ---------- */
+function tariffToCsv(tariff, zones, origins, grid) {
+  const lines = [];
+  lines.push("# nombre: " + (tariff?.name || "Tabulador"));
+  lines.push("# id: " + (tariff?.id || "tabulador"));
+  lines.push(["De\\\\A"].concat(zones).join(","));
+  origins.forEach((o, ri) => {
+    lines.push([o].concat(grid[ri].map((v) => (v == null ? "" : String(v).trim()))).join(","));
+  });
+  return lines.join("\\n") + "\\n";
+}
+
+function loadEditorGrid() {
+  const wrap = el("editorWrap");
+  const status = el("editorStatus");
+  wrap.innerHTML = "";
+  const tariff = state.tariffs[0];
+  if (!tariff) { wrap.innerHTML = '<p class="muted">No hay tabulador cargado.</p>'; return; }
+  const table = document.createElement("table");
+  table.className = "zone-grid";
+  const thead = document.createElement("thead");
+  const hr = document.createElement("tr");
+  const corner = document.createElement("th");
+  corner.className = "corner";
+  corner.textContent = "De \\\\ A";
+  hr.appendChild(corner);
+  tariff.zones.forEach((z) => {
+    const th = document.createElement("th");
+    th.textContent = z;
+    hr.appendChild(th);
+  });
+  thead.appendChild(hr);
+  table.appendChild(thead);
+  const tbody = document.createElement("tbody");
+  tariff.origins.forEach((origin, ri) => {
+    const tr = document.createElement("tr");
+    const th = document.createElement("th");
+    th.className = "rowhead";
+    th.textContent = origin;
+    tr.appendChild(th);
+    tariff.zones.forEach((z, ci) => {
+      const td = document.createElement("td");
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = (tariff.grid[ri] && tariff.grid[ri][ci] != null) ? tariff.grid[ri][ci] : "";
+      td.appendChild(input);
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  status.textContent = `${tariff.origins.length} salidas × ${tariff.zones.length} destinos`;
+}
+
+el("editorReload").addEventListener("click", () => loadEditorGrid());
+el("editorAddZone").addEventListener("click", () => {
+  const name = prompt("Nombre de la nueva zona:");
+  if (!name || !name.trim()) return;
+  const table = el("editorWrap").querySelector("table");
+  if (!table) return;
+  const theadRow = table.querySelector("thead tr");
+  const th = document.createElement("th");
+  th.textContent = name.trim();
+  theadRow.appendChild(th);
+  table.querySelectorAll("tbody tr").forEach((tr) => {
+    const td = document.createElement("td");
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = "";
+    td.appendChild(input);
+    tr.appendChild(td);
+  });
+  const tbody = table.querySelector("tbody");
+  const tr = document.createElement("tr");
+  const thh = document.createElement("th");
+  thh.className = "rowhead";
+  thh.textContent = name.trim();
+  tr.appendChild(thh);
+  const ncols = table.querySelector("thead tr").children.length - 1;
+  for (let i = 0; i < ncols; i++) {
+    const td = document.createElement("td");
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = "";
+    td.appendChild(input);
+    tr.appendChild(td);
+  }
+  tbody.appendChild(tr);
+  el("editorStatus").textContent = "Zona agregada. Recuerda guardar.";
+});
+
+el("editorSave").addEventListener("click", () => {
+  const table = el("editorWrap").querySelector("table");
+  if (!table) return;
+  const zones = [...table.querySelectorAll("thead th")].slice(1).map((th) => th.textContent.trim());
+  const origins = [...table.querySelectorAll("tbody tr .rowhead")].map((th) => th.textContent.trim());
+  const grid = [...table.querySelectorAll("tbody tr")].map((tr) =>
+    [...tr.querySelectorAll("td input")].map((inp) => inp.value.trim())
+  );
+  const tariff = state.tariffs[0];
+  // update in-memory
+  tariff.zones = zones;
+  tariff.origins = origins;
+  tariff.grid = grid;
+  tariff.prices = undefined;
+  // rebuild routes
+  const newTariff = loadTariff(tariffToCsv(tariff, zones, origins, grid), "tabulador.csv");
+  if (newTariff) {
+    state.tariffs = [newTariff];
+    // update EMBEDDED_CSV for restore
+    // (keep original embedded unchanged; restore uses original)
+  }
+  renderRoutes();
+  syncButtons();
+  // download CSV
+  const csv = tariffToCsv(tariff, zones, origins, grid);
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "tabulador.csv";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  toast("Tabulador guardado (CSV descargado)");
+  el("editorStatus").textContent = `${origins.length} salidas × ${zones.length} destinos · guardado`;
+});
+
+el("editorExport").addEventListener("click", () => {
+  const table = el("editorWrap").querySelector("table");
+  if (!table) return;
+  const zones = [...table.querySelectorAll("thead th")].slice(1).map((th) => th.textContent.trim());
+  const origins = [...table.querySelectorAll("tbody tr .rowhead")].map((th) => th.textContent.trim());
+  const grid = [...table.querySelectorAll("tbody tr")].map((tr) =>
+    [...tr.querySelectorAll("td input")].map((inp) => inp.value.trim())
+  );
+  const tariff = state.tariffs[0];
+  const csv = tariffToCsv(tariff, zones, origins, grid);
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "tabulador.csv";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  toast("CSV exportado");
 });
 
 /* ---------- Barra móvil ---------- */
