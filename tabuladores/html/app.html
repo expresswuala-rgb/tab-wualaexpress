@@ -104,6 +104,21 @@
     font-style: normal;
     font-display: swap;
   }
+  .mobile-bar { display: none; }
+  @media (max-width: 720px) {
+    .mobile-bar {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+      padding: 10px 12px; background: rgba(255,255,255,.96);
+      border-top: 1px solid var(--border); backdrop-filter: blur(8px);
+    }
+    .mobile-bar button { min-height: 44px; font-size: 13px; }
+    body { padding-bottom: 72px; }
+    .route-item { min-height: 44px; }
+    .style-card { min-height: 44px; }
+    input, select, button { font-size: 16px; }
+    .preview-box img { max-height: 60vh; }
+  }
 </style>
 </head>
 <body>
@@ -168,6 +183,12 @@
     </div>
   </section>
 </main>
+
+<div class="mobile-bar" id="mobileBar">
+  <button class="primary small" id="mPreviewBtn" type="button" disabled>Vista previa</button>
+  <button class="primary small" id="mGenerateBtn" type="button" disabled>Generar</button>
+  <button class="secondary small" id="mZipBtn" type="button" disabled>ZIP</button>
+</div>
 
 <div class="toast" id="toast" hidden></div>
 
@@ -802,6 +823,7 @@ function syncButtons() {
   const has = state.selected.size > 0;
   generateBtn.disabled = !has;
   zipBtn.disabled = state.selected.size === 0;
+  syncMobileBar();
 }
 
 el("toggleAll").addEventListener("click", () => {
@@ -1056,6 +1078,22 @@ zipBtn.addEventListener("click", async () => {
     syncButtons();
   }
 });
+
+/* ---------- Barra móvil ---------- */
+const mPreviewBtn = el("mPreviewBtn");
+const mGenerateBtn = el("mGenerateBtn");
+const mZipBtn = el("mZipBtn");
+if (mPreviewBtn) mPreviewBtn.addEventListener("click", () => previewBtn.click());
+if (mGenerateBtn) mGenerateBtn.addEventListener("click", () => generateBtn.click());
+if (mZipBtn) mZipBtn.addEventListener("click", () => zipBtn.click());
+// mantener disabled sincronizado
+function syncMobileBar() {
+  const has = state.selected.size > 0;
+  if (mPreviewBtn) mPreviewBtn.disabled = !has;
+  if (mGenerateBtn) mGenerateBtn.disabled = !has;
+  if (mZipBtn) mZipBtn.disabled = state.selected.size === 0;
+}
+syncMobileBar();
 
 /* ---------- Arranque ---------- */
 const embedded = loadTariff(EMBEDDED_CSV, "tabulador.csv");
