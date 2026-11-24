@@ -1001,6 +1001,7 @@ function addResults(items) {
     dl.className = "link";
     dl.textContent = "Descargar";
     dl.addEventListener("click", async () => {
+      toast("Guardando imagen…");
       // En Android, el método más confiable es compartir → "Guardar en archivos/galería"
       if (navigator.share) {
         try {
@@ -1043,7 +1044,7 @@ function addResults(items) {
       a.href = item.url;
       a.download = item.file;
       a.click();
-      toast("Si no se descargó, mantén presionada la imagen → Guardar imagen.");
+      toast("Descarga iniciada. Si no aparece, mantén presionada la imagen → Guardar imagen.");
     });
     const remove = document.createElement("button");
     remove.type = "button";
@@ -1144,7 +1145,7 @@ el("modalSaveBtn").addEventListener("click", async () => {
   a.href = src;
   a.download = filename;
   a.click();
-  toast("Si no se descargó, mantén presionada la imagen para guardarla.");
+  toast("Descarga iniciada. Si no aparece, mantén presionada la imagen → Guardar imagen.");
 });
 
 async function openPreview() {
