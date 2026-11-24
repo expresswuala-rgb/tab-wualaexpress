@@ -127,7 +127,7 @@
   .modal-head h3 { margin: 0; font-size: 15px; }
   .modal-close { background: none; border: none; font-size: 22px; line-height: 1; cursor: pointer; color: var(--muted); }
   .modal-body { padding: 12px 16px; text-align: center; }
-  .modal-body img { max-width: 100%; max-height: 70vh; height: auto; border-radius: 8px; border: 1px solid var(--border); object-fit: contain; touch-action: pinch-zoom; }
+  .modal-body img { max-width: 95%; max-height: 60vh; height: auto; border-radius: 8px; border: 1px solid var(--border); object-fit: contain; touch-action: pinch-zoom; }
   .modal-body p { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
   @media (max-width: 720px) {
     .modal { padding: 0; align-items: stretch; }
@@ -255,6 +255,7 @@
     <div class="modal-body">
       <img id="previewImg" alt="Vista previa" />
       <p class="muted" id="previewMeta"></p>
+      <p class="hint">Para guardar: mantén presionada la imagen → "Guardar imagen" o "Descargar imagen".</p>
     </div>
     <div class="modal-foot">
       <button class="primary" id="modalSaveBtn" type="button">Guardar imagen</button>
@@ -964,8 +965,9 @@ async function generateRoutes(routes) {
     try {
       const canvas = renderRoute(route, state.style);
       const blob = await canvasToBlob(canvas);
+      const dataUrl = canvas.toDataURL("image/png");
       const file = safeName(`salida_${route.origin}_${batch}_${randomId()}`) + ".png";
-      items.push({ name: route.origin, file, blob, url: URL.createObjectURL(blob), width: canvas.width, height: canvas.height });
+      items.push({ name: route.origin, file, blob, url: dataUrl, width: canvas.width, height: canvas.height });
     } catch (err) {
       console.error(err);
       toast(`Error con ${route.origin}: ${err.message}`, true);
@@ -1152,8 +1154,7 @@ async function openPreview() {
   openPreviewModal("", `Vista previa · ${route.name}`, "Generando…");
   try {
     const canvas = renderRoute(route, state.style);
-    const blob = await canvasToBlob(canvas);
-    const url = URL.createObjectURL(blob);
+    const url = canvas.toDataURL("image/png");
     openPreviewModal(url, `Vista previa · ${route.name}`, `${route.destinations.length} destinos · estilo ${state.style}`);
   } catch (err) {
     previewMeta.textContent = err.message;
