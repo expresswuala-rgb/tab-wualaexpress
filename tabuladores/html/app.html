@@ -127,8 +127,15 @@
   .modal-head h3 { margin: 0; font-size: 15px; }
   .modal-close { background: none; border: none; font-size: 22px; line-height: 1; cursor: pointer; color: var(--muted); }
   .modal-body { padding: 12px 16px; text-align: center; }
-  .modal-body img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--border); }
+  .modal-body img { max-width: 100%; max-height: 70vh; height: auto; border-radius: 8px; border: 1px solid var(--border); object-fit: contain; touch-action: pinch-zoom; }
   .modal-body p { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+  @media (max-width: 720px) {
+    .modal { padding: 0; align-items: stretch; }
+    .modal-card { width: 100%; max-width: 100%; max-height: 100vh; border-radius: 0; }
+    .modal-head { padding: 12px 16px; }
+    .modal-close { font-size: 28px; padding: 4px 8px; }
+    .modal-body img { max-height: 75vh; }
+  }
   .mobile-bar { display: none; }
   @media (max-width: 720px) {
     .mobile-bar {
@@ -137,12 +144,13 @@
       padding: 10px 12px; background: rgba(255,255,255,.96);
       border-top: 1px solid var(--border); backdrop-filter: blur(8px);
     }
-    .mobile-bar button { min-height: 44px; font-size: 13px; }
-    body { padding-bottom: 72px; }
-    .route-item { min-height: 44px; }
-    .style-card { min-height: 44px; }
+    .mobile-bar button { min-height: 48px; font-size: 13px; }
+    body { padding-bottom: 76px; }
+    .route-item { min-height: 48px; }
+    .style-card { min-height: 48px; }
     input, select, button { font-size: 16px; }
-    .preview-box img { max-height: 60vh; }
+    .preview-box img { max-height: 50vh; }
+    .action-row, #zipBtn { display: none; }
   }
 </style>
 </head>
@@ -247,6 +255,9 @@
     <div class="modal-body">
       <img id="previewImg" alt="Vista previa" />
       <p class="muted" id="previewMeta"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="primary" id="modalSaveBtn" type="button">Guardar imagen</button>
     </div>
   </div>
 </div>
@@ -983,33 +994,32 @@ function addResults(items) {
     open.className = "link";
     open.textContent = "Ver imagen";
     open.addEventListener("click", () => openPreviewModal(item.url, `Salida desde ${item.name}`, `${item.width}×${item.height}`));
-    const dl = document.createElement("a");
-    dl.href = item.url;
-    dl.download = item.file;
+    const dl = document.createElement("button");
+    dl.type = "button";
+    dl.className = "link";
     dl.textContent = "Descargar";
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "link";
-    remove.textContent = "Quitar";
-    remove.addEventListener("click", () => removeResult(item));
-    // En WebView de Android, <a download> puede fallar; ofrecer compartir si está disponible.
-    if (navigator.share) {
-      const share = document.createElement("button");
-      share.type = "button";
-      share.className = "link";
-      share.textContent = "Compartir";
-      share.addEventListener("click", async () => {
+    dl.addEventListener("click", async () => {
+      // En Android/WebView, <a download> puede no funcionar; intentar compartir primero.
+      if (navigator.share) {
         try {
           const res = await fetch(item.url);
           const blob = await res.blob();
           const file = new File([blob], item.file, { type: "image/png" });
           await navigator.share({ files: [file], title: `Salida desde ${item.name}` });
-        } catch (e) { /* cancelado */ }
-      });
-      actions.append(open, dl, share, remove);
-    } else {
-      actions.append(open, dl, remove);
-    }
+          return;
+        } catch (e) { /* cancelado o no soportado, caer al método clásico */ }
+      }
+      const a = document.createElement("a");
+      a.href = item.url;
+      a.download = item.file;
+      a.click();
+    });
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "link";
+    remove.textContent = "Quitar";
+    remove.addEventListener("click", () => removeResult(item));
+    actions.append(open, dl, remove);
     card.append(h3, img, actions);
     card._item = item;
     resultsEl.prepend(card);
@@ -1060,6 +1070,25 @@ function closePreviewModal() {
 }
 el("previewClose").addEventListener("click", closePreviewModal);
 previewModal.addEventListener("click", (e) => { if (e.target === previewModal) closePreviewModal(); });
+el("modalSaveBtn").addEventListener("click", async () => {
+  const src = previewImg.getAttribute("src");
+  if (!src) return;
+  const title = previewTitle.textContent || "imagen";
+  if (navigator.share) {
+    try {
+      const res = await fetch(src);
+      const blob = await res.blob();
+      const file = new File([blob], "tabulador.png", { type: "image/png" });
+      await navigator.share({ files: [file], title });
+      return;
+    } catch (e) { /* cancelado */ }
+  }
+  const a = document.createElement("a");
+  a.href = src;
+  a.download = "tabulador.png";
+  a.click();
+  toast("Si no se descargó, mantén presionada la imagen para guardarla.");
+});
 
 async function openPreview() {
   const routes = selectedRoutes();
