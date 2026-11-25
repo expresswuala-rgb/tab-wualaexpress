@@ -227,7 +227,6 @@
     </div>
 
     <div class="block">
-      <button class="primary" id="previewBtn" type="button" disabled>Vista previa</button>
       <button class="primary" id="generateBtn" type="button" disabled>Generar imágenes</button>
       <button class="secondary" id="zipBtn" type="button" disabled>Descargar todo (ZIP)</button>
     </div>
@@ -951,7 +950,6 @@ function renderRoutes() {
 
 function syncButtons() {
   const has = state.selected.size > 0;
-  if (previewBtn) previewBtn.disabled = !has;
   generateBtn.disabled = !has;
   zipBtn.disabled = state.selected.size === 0;
 }
@@ -1268,22 +1266,7 @@ el("previewClose").addEventListener("click", closePreviewModal);
 previewModal.addEventListener("click", (e) => { if (e.target === previewModal) closePreviewModal(); });
 // (modalSaveBtn eliminado: se usa "Descargar" y long-press para guardar)
 
-async function openPreview() {
-  const routes = selectedRoutes();
-  if (!routes.length) return;
-  const route = routes[0];
-  openPreviewModal("", `Vista previa · ${route.name}`, "Generando…");
-  try {
-    const canvas = renderRoute(route, state.style);
-    const url = canvas.toDataURL("image/png");
-    openPreviewModal(url, `Vista previa · ${route.name}`, `${route.destinations.length} destinos · estilo ${state.style}`);
-  } catch (err) {
-    previewMeta.textContent = err.message;
-    toast(err.message, true);
-  }
-}
-const previewBtn = el("previewBtn");
-if (previewBtn) previewBtn.addEventListener("click", openPreview);
+// (Vista previa eliminada: se usa "Ver imagen" en cada tarjeta generada)
 
 function renderDownloads() {
   const list = el("downloadsList");
@@ -1645,19 +1628,7 @@ el("editorExport").addEventListener("click", () => {
 });
 
 /* ---------- Barra móvil ---------- */
-const aPreviewBtn = el("aPreviewBtn");
-const aGenerateBtn = el("aGenerateBtn");
-const aZipBtn = el("aZipBtn");
-if (aPreviewBtn) aPreviewBtn.addEventListener("click", () => previewBtn.click());
-if (aGenerateBtn) aGenerateBtn.addEventListener("click", () => generateBtn.click());
-if (aZipBtn) aZipBtn.addEventListener("click", () => zipBtn.click());
-function syncActionBar() {
-  const has = state.selected.size > 0;
-  if (aPreviewBtn) aPreviewBtn.disabled = !has;
-  if (aGenerateBtn) aGenerateBtn.disabled = !has;
-  if (aZipBtn) aZipBtn.disabled = state.selected.size === 0;
-}
-syncActionBar();
+// (barra de acciones móviles eliminada)
 
 /* ---------- Arranque ---------- */
 const embedded = loadTariff(EMBEDDED_CSV, "tabulador.csv");
