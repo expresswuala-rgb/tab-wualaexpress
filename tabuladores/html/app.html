@@ -1298,14 +1298,29 @@ function renderDownloads() {
     actions.className = "download-actions";
     const openBtn = document.createElement("button");
     openBtn.type = "button";
-    openBtn.className = "primary small";
-    openBtn.textContent = "Abrir";
-    openBtn.addEventListener("click", () => openPreviewModal(item.url, `Salida desde ${item.name}`, `${item.width}×${item.height}`));
-    const shareBtn = document.createElement("button");
-    shareBtn.type = "button";
-    shareBtn.className = "secondary small";
-    shareBtn.textContent = "Compartir";
-    shareBtn.addEventListener("click", async () => {
+    openBtn.className = "link";
+    openBtn.textContent = "Abrir con";
+    openBtn.addEventListener("click", async () => {
+      try {
+        const Cap = window.Capacitor;
+        if (Cap && Cap.Plugins && Cap.Plugins.Filesystem && Cap.Plugins.Share) {
+          const base64 = item.url.split(",")[1];
+          const result = await Cap.Plugins.Filesystem.writeFile({
+            path: item.file,
+            data: base64,
+            directory: "CACHE",
+            recursive: true,
+          });
+          await Cap.Plugins.Share.share({
+            title: `Salida desde ${item.name}`,
+            url: result.uri,
+            dialogTitle: "Abrir con",
+          });
+          return;
+        }
+      } catch (e) {
+        console.error("OpenWith error:", e);
+      }
       if (navigator.share) {
         try {
           const res = await fetch(item.url);
@@ -1313,21 +1328,102 @@ function renderDownloads() {
           const file = new File([blob], item.file, { type: "image/png" });
           await navigator.share({ files: [file], title: `Salida desde ${item.name}` });
           return;
-        } catch (e) { if (e.name === "AbortError") return; }
+        } catch (e) {
+          if (e.name !== "AbortError") toast("No se pudo abrir con otra app.", true);
+        }
+      } else {
+        toast("Abrir con no disponible en este dispositivo.", true);
       }
-      // fallback
-      const a = document.createElement("a");
-      a.href = item.url;
-      a.download = item.file;
-      a.click();
-      toast("Si no se descargó, mantén presionada la imagen → Guardar imagen.");
+    });
+    const dlBtn = document.createElement("button");
+    dlBtn.type = "button";
+    dlBtn.className = "link";
+    dlBtn.textContent = "Descargar";
+    dlBtn.addEventListener("click", async () => {
+      dlBtn.disabled = true;
+      dlBtn.textContent = "Guardando…";
+      let saved = false;
+      try {
+        const Cap = window.Capacitor;
+        if (Cap && Cap.Plugins && Cap.Plugins.Filesystem) {
+          const base64 = item.url.split(",")[1];
+          await Cap.Plugins.Filesystem.writeFile({
+            path: item.file,
+            data: base64,
+            directory: "DOCUMENTS",
+            recursive: true,
+          });
+          toast("✓ Guardado en Documentos. Busca el archivo en la app Archivos.");
+          saved = true;
+        }
+      } catch (e) { console.error("Filesystem error:", e); }
+      if (!saved && navigator.share) {
+        try {
+          const res = await fetch(item.url);
+          const blob = await res.blob();
+          const file = new File([blob], item.file, { type: "image/png" });
+          await navigator.share({ files: [file], title: `Salida desde ${item.name}` });
+          toast("✓ Imagen compartida/guardada");
+          saved = true;
+        } catch (e) {
+          if (e.name === "AbortError") saved = true;
+        }
+      }
+      if (!saved) {
+        const a = document.createElement("a");
+        a.href = item.url;
+        a.download = item.file;
+        a.click();
+        toast("Descarga iniciada. Si no aparece: mantén presionada la imagen → Guardar imagen.");
+      }
+      dlBtn.disabled = false;
+      dlBtn.textContent = "Descargar";
+    });
+    const shareBtn = document.createElement("button");
+    shareBtn.type = "button";
+    shareBtn.className = "link";
+    shareBtn.textContent = "Compartir";
+    shareBtn.addEventListener("click", async () => {
+      try {
+        const Cap = window.Capacitor;
+        if (Cap && Cap.Plugins && Cap.Plugins.Share) {
+          const base64 = item.url.split(",")[1];
+          const result = await Cap.Plugins.Filesystem.writeFile({
+            path: item.file,
+            data: base64,
+            directory: "CACHE",
+            recursive: true,
+          });
+          await Cap.Plugins.Share.share({
+            title: `Salida desde ${item.name}`,
+            url: result.uri,
+            dialogTitle: "Compartir imagen",
+          });
+          return;
+        }
+      } catch (e) {
+        console.error("Share error:", e);
+      }
+      if (navigator.share) {
+        try {
+          const res = await fetch(item.url);
+          const blob = await res.blob();
+          const file = new File([blob], item.file, { type: "image/png" });
+          await navigator.share({ files: [file], title: `Salida desde ${item.name}` });
+          return;
+        } catch (e) {
+          if (e.name !== "AbortError") toast("No se pudo compartir.", true);
+        }
+      } else {
+        toast("Compartir no disponible en este dispositivo.", true);
+      }
     });
     const removeBtn = document.createElement("button");
     removeBtn.type = "button";
     removeBtn.className = "link";
     removeBtn.textContent = "Quitar";
     removeBtn.addEventListener("click", () => { removeResult(item); renderDownloads(); });
-    actions.append(openBtn, shareBtn, removeBtn);
+    actions.append(openBtn, dlBtn, shareBtn, removeBtn);
     row.append(thumb, info, actions);
     list.appendChild(row);
   }
