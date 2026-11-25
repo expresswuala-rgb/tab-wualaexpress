@@ -174,21 +174,11 @@
   .bottom-nav { display: none; }
   .mobile-bar { display: none; }
   @media (max-width: 720px) {
-    .bottom-nav { display: none; }
-    .action-bar {
-      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
-      position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
-      padding: 10px 12px; background: rgba(255,255,255,.96);
-      border-top: 1px solid var(--border); backdrop-filter: blur(8px);
-      box-shadow: 0 -2px 10px rgba(0,0,0,.06);
-    }
-    .action-bar button { min-height: 48px; font-size: 13px; }
-    body { padding-bottom: 76px; }
-    .route-item { min-height: 48px; }
-    .style-card { min-height: 48px; }
+    body { padding-bottom: 16px; }
+    .route-item { min-height: 44px; }
+    .style-card { min-height: 44px; }
     input, select, button { font-size: 16px; }
-    .preview-box img { max-height: 50vh; }
-    .action-row, #zipBtn { display: none; }
+    .preview-box img { max-height: 60vh; }
     .tabs { display: flex; gap: 4px; overflow-x: auto; padding: 8px 12px 0; }
     .tab { padding: 6px 12px; font-size: 12px; white-space: nowrap; }
   }
@@ -296,12 +286,6 @@
   <p class="hint" id="editorStatus"></p>
 </section>
 
-<div class="action-bar" id="actionBar">
-  <button class="primary small" id="aPreviewBtn" type="button" disabled>Vista previa</button>
-  <button class="primary small" id="aGenerateBtn" type="button" disabled>Generar</button>
-  <button class="secondary small" id="aZipBtn" type="button" disabled>ZIP</button>
-</div>
-
 <div class="modal" id="previewModal" hidden>
   <div class="modal-card">
     <div class="modal-head">
@@ -312,9 +296,6 @@
       <img id="previewImg" alt="Vista previa" />
       <p class="muted" id="previewMeta"></p>
       <p class="hint">Para guardar: mantén presionada la imagen → "Guardar imagen" o "Descargar imagen".</p>
-    </div>
-    <div class="modal-foot">
-      <button class="primary" id="modalSaveBtn" type="button">Guardar imagen</button>
     </div>
   </div>
 </div>
@@ -976,7 +957,6 @@ function syncButtons() {
   if (previewBtn) previewBtn.disabled = !has;
   generateBtn.disabled = !has;
   zipBtn.disabled = state.selected.size === 0;
-  syncActionBar();
 }
 
 el("toggleAll").addEventListener("click", () => {
@@ -1289,59 +1269,7 @@ function closePreviewModal() {
 }
 el("previewClose").addEventListener("click", closePreviewModal);
 previewModal.addEventListener("click", (e) => { if (e.target === previewModal) closePreviewModal(); });
-el("modalSaveBtn").addEventListener("click", async () => {
-  const src = previewImg.getAttribute("src");
-  if (!src) return;
-  const title = previewTitle.textContent || "imagen";
-  const filename = "tabulador.png";
-  const btn = el("modalSaveBtn");
-  btn.disabled = true;
-  btn.textContent = "Guardando…";
-  let saved = false;
-  // 1) Web Share API (más confiable en Android)
-  if (navigator.share) {
-    try {
-      const res = await fetch(src);
-      const blob = await res.blob();
-      const file = new File([blob], filename, { type: "image/png" });
-      await navigator.share({ files: [file], title });
-      toast("✓ Imagen compartida/guardada");
-      saved = true;
-    } catch (e) {
-      if (e.name === "AbortError") saved = true; // cancelado
-    }
-  }
-  // 2) Capacitor Filesystem
-  try {
-    const Cap = window.Capacitor;
-    if (Cap && Cap.Plugins && Cap.Plugins.Filesystem) {
-      const res = await fetch(src);
-      const blob = await res.blob();
-      const base64 = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result.split(",")[1]);
-        reader.readAsDataURL(blob);
-      });
-      await Cap.Plugins.Filesystem.writeFile({
-        path: filename,
-        data: base64,
-        directory: "DOCUMENTS",
-        recursive: true,
-      });
-      toast("✓ Guardado en Documentos. Busca el archivo en la app Archivos.");
-      saved = true;
-    }
-  } catch (e) { /* fallar al siguiente */ }
-  if (!saved) {
-    const a = document.createElement("a");
-    a.href = src;
-    a.download = filename;
-    a.click();
-    toast("Descarga iniciada. Si no aparece: mantén presionada la imagen → Guardar imagen.");
-  }
-  btn.disabled = false;
-  btn.textContent = "Guardar imagen";
-});
+// (modalSaveBtn eliminado: se usa "Descargar" y long-press para guardar)
 
 async function openPreview() {
   const routes = selectedRoutes();
