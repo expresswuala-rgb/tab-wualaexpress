@@ -1081,8 +1081,65 @@ function addResults(items) {
     const open = document.createElement("button");
     open.type = "button";
     open.className = "link";
-    open.textContent = "Ver imagen";
-    open.addEventListener("click", () => openPreviewModal(item.url, `Salida desde ${item.name}`, `${item.width}×${item.height}`));
+    open.textContent = "Abrir con";
+    open.addEventListener("click", async () => {
+      // 1) Capacitor FileOpener (abre selector de apps de Android)
+      try {
+        const Cap = window.Capacitor;
+        if (Cap && Cap.Plugins && Cap.Plugins.FileOpener) {
+          const base64 = item.url.split(",")[1];
+          const result = await Cap.Plugins.Filesystem.writeFile({
+            path: item.file,
+            data: base64,
+            directory: "CACHE",
+            recursive: true,
+          });
+          await Cap.Plugins.FileOpener.open({
+            filePath: result.uri,
+            contentType: "image/png",
+          });
+          return;
+        }
+      } catch (e) {
+        console.error("FileOpener error:", e);
+      }
+      // 2) Capacitor Share (share sheet incluye "Abrir con")
+      try {
+        const Cap = window.Capacitor;
+        if (Cap && Cap.Plugins && Cap.Plugins.Share) {
+          const base64 = item.url.split(",")[1];
+          const result = await Cap.Plugins.Filesystem.writeFile({
+            path: item.file,
+            data: base64,
+            directory: "CACHE",
+            recursive: true,
+          });
+          await Cap.Plugins.Share.share({
+            title: `Salida desde ${item.name}`,
+            url: result.uri,
+            dialogTitle: "Abrir con",
+          });
+          return;
+        }
+      } catch (e) {
+        console.error("Share error:", e);
+      }
+      // 3) Web Share API (fallback)
+      if (navigator.share) {
+        try {
+          const res = await fetch(item.url);
+          const blob = await res.blob();
+          const file = new File([blob], item.file, { type: "image/png" });
+          await navigator.share({ files: [file], title: `Salida desde ${item.name}` });
+          return;
+        } catch (e) {
+          if (e.name === "AbortError") return;
+        }
+      }
+      // 4) Último recurso: mostrar en modal
+      openPreviewModal(item.url, `Salida desde ${item.name}`, `${item.width}×${item.height}`);
+      toast("Mantén presionada la imagen → Guardar imagen o Abrir con.");
+    });
     const dl = document.createElement("button");
     dl.type = "button";
     dl.className = "link";
