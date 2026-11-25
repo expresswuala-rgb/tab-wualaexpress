@@ -58,6 +58,10 @@ jobs:
         working-directory: android-app
         run: npx cap sync android
 
+      - name: Generate app icons
+        working-directory: android-app
+        run: npx capacitor-assets generate --android
+
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v3
         with:
