@@ -152,7 +152,7 @@
     font-style: normal;
     font-display: swap;
   }
-  .tabs { display: flex; gap: 4px; padding: 12px 24px 0; max-width: 1500px; margin: 0 auto; }
+  .tabs { display: flex; gap: 4px; padding: 12px 24px 0; max-width: 1500px; margin: 0 auto; position: sticky; top: 64px; z-index: 9; background: var(--bg); padding-top: 8px; }
   .tab { padding: 8px 16px; border: 1px solid var(--border); border-bottom: none; border-radius: 10px 10px 0 0; background: #f3ece3; color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; }
   .tab.active { background: var(--panel); color: var(--ink); }
   .modal { position: fixed; inset: 0; background: rgba(15, 23, 42, .6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
