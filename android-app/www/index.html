@@ -939,10 +939,6 @@ function renderRoutes() {
       const label = document.createElement("label");
       label.htmlFor = input.id;
       label.textContent = route.origin;
-      const count = document.createElement("span");
-      count.className = "zone-count";
-      count.textContent = `${route.destinations.length} destinos`;
-      label.appendChild(count);
       row.append(input, label);
       group.appendChild(row);
     });
